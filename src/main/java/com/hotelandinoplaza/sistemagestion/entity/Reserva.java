@@ -22,7 +22,7 @@ public class Reserva {
     private LocalDate fechaIngreso;
     private LocalDate fechaSalida;
     private String estado;
-
+    private String motivoCancelacion;
     @ManyToOne
     private Habitacion habitacion;
 }

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -84,13 +85,21 @@ public class ReservaService {
     public Double obtenerTotalIngresos() {
         return reservaRepository.calcularTotalIngresosDashboard();
     }
+
     public void cancelarReserva(Long id, String motivo) {
         Reserva reserva = reservaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("La reserva con ID " + id + " no existe"));
 
-        reserva.setEstado("CANCELADA");
-        reserva.setMotivoCancelacion(motivo); // 👈 Guardamos el motivo en MySQL
+        // 💡 Blindaje en Spring Boot: Contar palabras de la cadena recibida
+        String motivoLimpio = motivo != null ? motivo.trim() : "";
+        long conteoPalabras = motivoLimpio.isEmpty() ? 0 : motivoLimpio.split("\\s+").length;
 
+        if (conteoPalabras > 10) {
+            throw new IllegalArgumentException("Error: El motivo de cancelación no puede exceder las 10 palabras.");
+        }
+
+        reserva.setEstado("CANCELADA");
+        reserva.setMotivoCancelacion(motivoLimpio);
         reservaRepository.save(reserva);
     }
 

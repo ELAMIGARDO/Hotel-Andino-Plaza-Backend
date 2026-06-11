@@ -6,7 +6,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -57,10 +59,9 @@ public class ReservaController {
 
     // 4. Finalizar / Liberar habitación
     @PutMapping("/{id}/finalizar")
-    public ResponseEntity<String> finalizar(@PathVariable Long id) {
+    public ResponseEntity<String> finalizar(@PathVariable Long id, @RequestBody(required = false) String body) {
         try {
             reservaService.finalizarReserva(id);
-            // 🔥 TIEMPO REAL: Notificamos a React para que pinte la celda de color verde inmediatamente
             messagingTemplate.convertAndSend("/topic/disponibilidad", "UPDATE_RESERVA");
             return ResponseEntity.ok().body("Habitación liberada con éxito y reserva archivada.");
         } catch (RuntimeException e) {
@@ -84,18 +85,12 @@ public class ReservaController {
         return new ResponseEntity<>(total, HttpStatus.OK);
     }
 
+    // 7. Cancelar Reserva
     @PutMapping("/{id}/cancelar")
-    public ResponseEntity<String> cancelar(@PathVariable Long id, @RequestBody String motivo) {
-        try {
-            // Ejecuta la lógica del service
-            reservaService.cancelarReserva(id, motivo);
-
-            // 🔥 TIEMPO REAL: Avisamos a React para que pinte la tabla de cancelaciones al instante
-            messagingTemplate.convertAndSend("/topic/disponibilidad", "UPDATE_RESERVA");
-
-            return ResponseEntity.ok().body("Reserva cancelada con éxito.");
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<String> cancelar(@PathVariable Long id, @RequestBody java.util.Map<String, String> body) {
+        String motivoLimpio = body.get("motivo");
+        reservaService.cancelarReserva(id, motivoLimpio);
+        messagingTemplate.convertAndSend("/topic/disponibilidad", "UPDATE_RESERVA");
+        return ResponseEntity.ok().body("Reserva cancelada con éxito.");
     }
 }
